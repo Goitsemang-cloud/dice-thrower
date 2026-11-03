@@ -1,30 +1,59 @@
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
-import uuid from 'react-native-uuid';
+import { StyleSheet, Text, View } from 'react-native';
+import { useTheme, type } from '../theme';
+import FadeIn from './FadeIn';
+import DoubleANdThriple from '../functions/DoubleANdThriple';
+import OddAndEven from '../functions/OddAndEven';
 
-
-const devicewidth = Dimensions.get('window').width;
-const deviceheight = Dimensions.get('window').height;
-
-export default function Diplay({ diceNumber, sortedDicenumber }) {
+function Row({ label, value, last }) {
+  const theme = useTheme();
   return (
-    <View style={styles.InputContainer}>
-      <Text>
-        Dice Thrown : {diceNumber[0] != 0 ? diceNumber : 'dice'}
-      </Text>
-      <Text>-------------------------------</Text>
-      <Text>
-        Sorted : {sortedDicenumber[0] != 0 ? sortedDicenumber : 'dice'}
-      </Text>
+    <View style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.separator }]}>
+      <Text style={[type.body, { color: theme.label }]}>{label}</Text>
+      <Text style={[type.body, styles.value, { color: theme.secondaryLabel }]}>{value}</Text>
     </View>
-  )
+  );
+}
+
+export default function Diplay({ diceNumber, sortedDicenumber, rolling }) {
+  const theme = useTheme();
+  const rolled = diceNumber[0] !== 0;
+  const pattern = [DoubleANdThriple(...diceNumber), OddAndEven(...diceNumber)].filter(Boolean).join(' · ');
+
+  const show = (text) => (rolling ? 'Rolling…' : rolled ? text : '—');
+
+  return (
+    <View style={styles.section}>
+      <Text style={[type.footnote, styles.header, { color: theme.secondaryLabel }]}>RESULT</Text>
+      <FadeIn trigger={rolling} style={[styles.card, { backgroundColor: theme.card }]}>
+        <Row label="Thrown" value={show(diceNumber.join(' · '))} />
+        <Row label="Sorted" value={show(sortedDicenumber.join(' · '))} />
+        <Row label="Pattern" value={show(pattern || 'None')} last />
+      </FadeIn>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  InputContainer: {
-    width: devicewidth * .7,
-    height: deviceheight * .1,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center'
-  }
+  section: {
+    alignSelf: 'stretch',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+  },
+  card: {
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    paddingLeft: 16,
+  },
+  row: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 16,
+  },
+  value: {
+    fontVariant: ['tabular-nums'],
+  },
 });
