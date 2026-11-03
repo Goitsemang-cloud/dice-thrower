@@ -1,114 +1,110 @@
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Diplay from './components/diplay'
 import Dice from './components/Dice';
 import List from './components/list';
 import Guessnth from './components/guessnth';
+import Button from './components/Button';
+import Sheet from './components/Sheet';
+import { useTheme, type, haptic } from './theme';
 
 import GuessUnitllMatch from './functions/guessUnitllMatch';
 import ThrowDice from './functions/throwDice';
 
-const devicewidth = Dimensions.get('window').width;
-const deviceheight = Dimensions.get('window').height;
-
 export default function Home() {
+  const theme = useTheme();
   const [diceNumber, setDiceNumber] = useState([0, 0, 0]);
   const [sortedDicenumber, setSortedDicenumber] = useState([0, 0, 0]);
+  const [rollId, setRollId] = useState(0);
+  const [rolling, setRolling] = useState(false);
   const [showModel, setShowModel] = useState(false);
   const [optionShowModel, setOptionShowModel] = useState(false);
   const [guessNth, setGuessNth] = useState([]);
-  const [userInput, setUserInput] = useState(0);
-  const [submit, setSubmit] = useState(false)
+
+  const rolled = diceNumber[0] !== 0;
+  const canGuess = rolled && !rolling;
+
+  const throwDice = () => {
+    haptic.impact();
+    ThrowDice(setDiceNumber, setSortedDicenumber);
+    setRolling(true);
+    setRollId((id) => id + 1);
+  };
+
+  const guessUntilMatch = () => {
+    GuessUnitllMatch(setGuessNth, sortedDicenumber);
+    haptic.success();
+    setOptionShowModel(true);
+  };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
 
-      {/* Display Section */}
-      <Diplay
-        diceNumber={diceNumber}
-        sortedDicenumber={sortedDicenumber}
-      />
+      <View style={styles.header}>
+        <Text style={[type.largeTitle, { color: theme.label }]} accessibilityRole="header">Dice Thrower</Text>
+        <Text style={[type.subheadline, { color: theme.secondaryLabel }]}>
+          Roll three dice, then see how long chance takes to land them again in order.
+        </Text>
+      </View>
 
-      {/* Dice section */}
-      <Dice
-        diceNumber={diceNumber}
-      />
-      <>
-        {
-          optionShowModel
-            ?
-            <List
-              setOptionShowModel={setOptionShowModel}
-              guessNth={guessNth}
-              hasClose={true}
-            />
-            :
-            showModel
-              ?
-              <Guessnth
-                guessNth={guessNth}
-                userInput={userInput}
-                setUserInput={setUserInput}
-                submit={submit}
-                setSubmit={setSubmit}
-                setShowModel={setShowModel}
-                setOptionShowModel={setOptionShowModel}
-                setGuessNth={setGuessNth}
-                sortedDicenumber={sortedDicenumber}
-              />
-              :
-              /* button */
-              <View style={styles.btnContainer}>
+      <View style={styles.stage}>
+        <Dice diceNumber={diceNumber} rollId={rollId} onSettled={() => setRolling(false)} />
+        <Diplay diceNumber={diceNumber} sortedDicenumber={sortedDicenumber} rolling={rolling} />
+      </View>
 
-                <TouchableOpacity style={styles.btn} onPress={() => ThrowDice(setDiceNumber, setSortedDicenumber)}>
-                  <Text>throw Dice</Text>
-                </TouchableOpacity>
+      <View style={styles.actions}>
+        <Button title={rolling ? 'Rolling…' : 'Roll Dice'} onPress={throwDice} disabled={rolling} />
+        <View style={styles.row}>
+          <Button title="Guess Nth" variant="tinted" style={styles.flex} disabled={!canGuess}
+            onPress={() => { haptic.light(); setShowModel(true); }} />
+          <Button title="Until Match" variant="tinted" style={styles.flex} disabled={!canGuess}
+            onPress={guessUntilMatch} />
+        </View>
+        {!rolled && (
+          <Text style={[type.footnote, styles.hint, { color: theme.secondaryLabel }]}>
+            Roll the dice to unlock guessing.
+          </Text>
+        )}
+      </View>
 
-                <TouchableOpacity style={[styles.btn, diceNumber[0] == 0 ? styles.conditionalColor : '']} disabled={diceNumber[0] == 0}
-                  onPress={() => [setShowModel(true), setUserInput(0)]}>
-                  <Text>Guess Nth Term</Text>
-                </TouchableOpacity>
+      <Sheet visible={showModel} title="Guess Nth Roll" onClose={() => setShowModel(false)}>
+        <Guessnth guessNth={guessNth} setGuessNth={setGuessNth} sortedDicenumber={sortedDicenumber} />
+      </Sheet>
 
-                <TouchableOpacity style={[styles.btn, diceNumber[0] == 0 ? styles.conditionalColor : '']} disabled={diceNumber[0] == 0}
-                  onPress={() => [setOptionShowModel(true), GuessUnitllMatch(setGuessNth, sortedDicenumber)]}>
-                  <Text>Guess Until Match</Text>
-                </TouchableOpacity>
+      <Sheet visible={optionShowModel} title="Roll Until Match" onClose={() => setOptionShowModel(false)}>
+        <List guessNth={guessNth} target={sortedDicenumber} />
+      </Sheet>
 
-              </View>
-        }
-      </>
-
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  header: {
+    paddingTop: 12,
+    gap: 4,
+  },
+  stage: {
+    flex: 1,
     justifyContent: 'center',
   },
-  btnContainer: {
-    alignItems: 'center',
-    justifyContent: 'center'
+  actions: {
+    gap: 12,
+    paddingBottom: 8,
   },
-  btn: {
-    backgroundColor: '#6CC1EB',
-    width: devicewidth * .7,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 5,
+  row: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  InputContainer: {
-    width: devicewidth * .7,
-    height: deviceheight * .1,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center'
+  flex: {
+    flex: 1,
   },
-  conditionalColor: {
-    backgroundColor: '#E6E6E6'
-  }
+  hint: {
+    textAlign: 'center',
+  },
 });

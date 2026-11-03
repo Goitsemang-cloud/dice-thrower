@@ -1,47 +1,26 @@
-import DoubleANdThriple from "./DoubleANdThriple";
-import OddAndEven from "./OddAndEven";
-import uuid from 'react-native-uuid';
+import DoubleANdThriple from './DoubleANdThriple';
+import OddAndEven from './OddAndEven';
+import { rollThree } from './throwDice';
 
-export default function GuessNthIterm(nth, setGuessNth, setShowModel, sortedDicenumber) {
-  let Guess = []
+// Rolls up to `nth` times, stopping early when a roll matches the target in order
+export default function GuessNthIterm(nth, setGuessNth, sortedDicenumber) {
+  const Guess = [];
 
-  for (let i = 1; i <= nth; i++) {
+  for (let count = 1; count <= nth; count++) {
+    const value = rollThree();
+    const match = value.every((die, i) => die === sortedDicenumber[i]);
 
-    let Threedices = [
-      Math.floor(Math.random() * 6) + 1,
-      Math.floor(Math.random() * 6) + 1,
-      Math.floor(Math.random() * 6) + 1
-    ];
+    Guess.push({
+      key: String(count),
+      count,
+      value,
+      tags: [DoubleANdThriple(...value), OddAndEven(...value)].filter(Boolean),
+      match,
+    });
 
-    let match = true;
-    for (let j = 0, len = sortedDicenumber.length; j < len; j++) {
-      if (Threedices[j] !== sortedDicenumber[j]) {
-        match = false;
-        break;
-      }
-    }
-
-    if (match) {
-      Guess.push({
-        key: uuid.v4(),
-        count: i,
-        value: Threedices,
-        message: DoubleANdThriple(Threedices[0], Threedices[1], Threedices[2]) + ' ' + OddAndEven(Threedices[0], Threedices[1], Threedices[2]) + "  ***Match***"
-      });
-      break;
-    } else {
-      Guess.push({
-        key: uuid.v4(),
-        count: i,
-        value: Threedices,
-        message: DoubleANdThriple(Threedices[0], Threedices[1], Threedices[2]) + ' ' + OddAndEven(Threedices[0], Threedices[1], Threedices[2])
-      });
-    }
+    if (match) break;
   }
 
-  setGuessNth(Guess)
-  setShowModel(true)
+  setGuessNth(Guess);
+  return Guess;
 }
-
-
-/* to be fixed soon */
